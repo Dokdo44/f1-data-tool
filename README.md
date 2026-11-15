@@ -11,6 +11,16 @@ stages apply to any repeated-measurement dataset.
 
 **Stack** — Python 3 · pandas · matplotlib · FastF1 · argparse
 
+This repository holds two stages of the same idea:
+
+| | | |
+|---|---|---|
+| **`src/`** | CLI pipeline | One command: ingest → clean → summarize → plot → report |
+| **`service/`** | REST API | Upload a CSV, validate row by row, store it, query statistics and outliers later |
+
+The CLI answers *"analyze this file."* The service answers *"store this and let me query it."*
+See [`service/README.md`](service/README.md) for the API.
+
 ---
 
 ## Usage

@@ -11,3 +11,11 @@ __pycache__/
 # OS
 .DS_Store
 
+
+# service
+service/.venv/
+service/*.db
+service/.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
