@@ -13,7 +13,7 @@ from app.schemas import (
     PointOut,
     Summary,
 )
-from app.stats import find_anomalies, summarize
+from app.stats import find_anomalies, find_anomalies_rolling, summarize
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -92,13 +92,29 @@ def get_summary(dataset_id: int, db: Session = Depends(get_db)):
 def get_anomalies(
     dataset_id: int,
     threshold: float = Query(3.0, ge=0.5, le=10.0, description="z-score cutoff"),
+    mode: str = Query(
+        "global",
+        pattern="^(global|rolling)$",
+        description="global: z-score against the whole series. "
+        "rolling: against the preceding window only — use this on seasonal data, "
+        "where a global score flags every cycle peak.",
+    ),
+    window: int = Query(
+        24, ge=2, le=1000, description="rolling mode only: points in the trailing window"
+    ),
     db: Session = Depends(get_db),
 ):
     dataset = _load(db, dataset_id)
-    found = find_anomalies(_points(dataset), threshold=threshold)
+    points = _points(dataset)
+    if mode == "rolling":
+        found = find_anomalies_rolling(points, window=window, threshold=threshold)
+    else:
+        found = find_anomalies(points, threshold=threshold)
     return AnomalyReport(
         dataset_id=dataset.id,
+        mode=mode,
         threshold=threshold,
+        window=window if mode == "rolling" else None,
         count=len(found),
         anomalies=found,
     )

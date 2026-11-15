@@ -36,7 +36,7 @@ uvicorn app.main:app --reload
 ### Tests
 
 ```bash
-pytest -q          # 22 tests, no database required
+pytest -q          # 29 tests, no database required
 ```
 
 ---
@@ -49,7 +49,7 @@ pytest -q          # 22 tests, no database required
 | `GET` | `/datasets` | List datasets, newest first. |
 | `GET` | `/datasets/{id}` | One dataset's metadata. |
 | `GET` | `/datasets/{id}/summary` | count, min, max, mean, median, stdev, time range. |
-| `GET` | `/datasets/{id}/anomalies?threshold=3.0` | Points whose z-score exceeds the threshold. |
+| `GET` | `/datasets/{id}/anomalies?threshold=3.0&mode=global\|rolling&window=24` | Points whose z-score exceeds the threshold. |
 | `GET` | `/datasets/{id}/points?limit=&offset=` | Raw points, paginated. |
 | `DELETE` | `/datasets/{id}` | Delete a dataset and its points. |
 | `GET` | `/healthz` | Liveness probe. |
@@ -101,7 +101,7 @@ app/ingest.py            CSV parsing and row-level validation
 app/stats.py             summary statistics, z-score anomaly detection
 app/routers/datasets.py  HTTP layer
 static/index.html        upload page with Chart.js chart
-tests/                   22 tests (unit + API)
+tests/                   29 tests (unit + API)
 samples/                 clean and deliberately malformed CSVs
 ```
 
@@ -113,13 +113,18 @@ samples/                 clean and deliberately malformed CSVs
   the schema starts changing in production.
 - Summary statistics load the full dataset into memory. Acceptable at the 200k-row cap;
   beyond that, push the aggregation into SQL.
-- Anomaly detection is a global z-score. It does not model seasonality or trend, so a
-  series with a strong daily cycle will flag its own peaks.
+- Two detection modes. `global` scores against the whole series; `rolling` scores each
+  point against the preceding `window` only. Rolling finds spikes riding on a drift and
+  clean level shifts, both of which global misses because the movement itself dominates
+  the spread. Neither handles a smooth cycle: a short window reports the flanks, a long
+  one washes the cycle out. Seasonal data needs the cycle modelled and removed first —
+  `test_rolling_does_not_solve_a_smooth_cycle` pins that down.
 - No authentication. Every dataset is readable by anyone with the URL.
 
 ## Roadmap
 
-- [ ] Rolling-window z-score so seasonal series stop self-flagging
+- [ ] Median/MAD scoring, so one outlier stops masking the next
+- [ ] Seasonal decomposition before scoring
 - [ ] SQL-side aggregation for the summary endpoint
 - [ ] Alembic migrations
 - [ ] GitHub Actions running `pytest` on every push

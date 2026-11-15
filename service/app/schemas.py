@@ -44,7 +44,9 @@ class Anomaly(BaseModel):
 
 class AnomalyReport(BaseModel):
     dataset_id: int
+    mode: str
     threshold: float
+    window: int | None = None
     count: int
     anomalies: list[Anomaly]
 
